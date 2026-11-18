@@ -229,6 +229,7 @@ const durOf=(d,a)=>a.dur+(S.ext[d+"|"+a.id]||0);
 const pushable=a=>{const k=cat(a.cat).k;return k==="inv"||k==="oci"||k==="per"};
 function eff(d){const out={};if(d!==TODAY())return out;const now=new Date(),nm=now.getHours()*60+now.getMinutes(),T=S.timer,mn=t=>{const x=new Date(t);return x.getHours()*60+x.getMinutes()};let cur2=0;
  const busy=[];(S.runs||[]).forEach(r=>{if(r.d===d&&typeof r.s==="number"&&typeof r.e==="number"&&r.e>r.s&&iso(new Date(r.s))===d)busy.push([mn(r.s),mn(r.e)])});
+ S.log.forEach(l=>{if(l.date===d&&typeof l.st==='number'&&typeof l.en==='number'&&iso(new Date(l.st))===d&&mn(l.en)>mn(l.st)&&iso(new Date(l.en))===d)busy.push([mn(l.st),mn(l.en)])});
  if(T&&T.act&&T.date===d&&iso(new Date(T.start))===d){const ra=actsOn(d).find(x=>x.id===T.act);busy.push([mn(T.start),Math.max(mn(T.start)+(ra?durOf(d,ra):0),nm)+1])}
  const free=(st,dur)=>{let ch=1,g=0;while(ch&&g++<20){ch=0;for(const b of busy){if(st<b[1]&&st+dur>b[0]){st=Math.ceil(b[1]/5)*5;ch=1}}}return st};
  actsOn(d).forEach(a=>{const dur=durOf(d,a),s0=hm(a.t),m=minDone(d,a),run=T&&T.act===a.id&&T.date===d;
@@ -300,12 +301,12 @@ function rHoy(){
  if(!acts.length)h+=`<div class="empty">No hay actividades planeadas para este día. Toca «＋ Actividad» para crear una: la repites los días que quieras.</div>`;
  const EF=eff(d);acts.forEach(a=>{const m=minDone(d,a),late=d<td&&!m&&!sk,run=T&&T.act===a.id&&T.date===d,sm=EF[a.id]?EF[a.id].s:hm(a.t),em=EF[a.id]?EF[a.id].e:sm+durOf(d,a);
   h+=`<div class="it ${m?"dn":""} ${late?"late":""} ${run?"run":""}" data-aid="${a.id}" data-s="${sm}" data-e="${em}"><button class="ck ${m?"on":""}" data-a="tg" data-id="${a.id}" aria-label="Marcar ${esc(a.n)}">${CK}</button><div class="sp"><b>${esc(a.n)}</b><small>${a.wt?"Semana "+weekDone(d,a)+"/"+a.wt+" · ":""}${a.est&&!EF[a.id]?"≈ ":""}${EF[a.id]?"↷ "+mh(EF[a.id].s)+" – "+mh(EF[a.id].e)+" (movida, era "+a.t+")":a.t+" – "+mh(hm(a.t)+durOf(d,a))} · ${fm(durOf(d,a))}${late?" · atrasada":""}</small></div>${m?`<button class="mini" data-a="adj" data-id="${a.id}">${TI} ${fm(m)}</button>`:`<button class="mini" data-a="tm" data-id="${a.id}" aria-label="Cronómetro">▶</button>`}${chip(a.cat)}${a.sh?"":`<button class="mini grip" data-grip="1" aria-label="Arrastrar para mover" title="Arrastra para moverla">⋮⋮</button>`}<button class="mini" data-a="actmenu" data-id="${a.id}" aria-label="Editar">⋯</button></div>`});
- const lg=S.log.filter(l=>l.date===d);
+ const lg=S.log.filter(l=>l.date===d).sort((a,b)=>(a.st||0)-(b.st||0)),lgR=l=>l.st&&l.en?mh(new Date(l.st).getHours()*60+new Date(l.st).getMinutes())+" – "+mh(new Date(l.en).getHours()*60+new Date(l.en).getMinutes())+" · ":"";
  h+=`<div class="row"><b class="sp" style="font-size:15px">Otro tiempo registrado</b><button class="mini" data-a="newlog">＋ Registro</button></div>`;
  if(!lg.length&&!imp.length)h+=`<div class="empty">Lo que hiciste sin planearlo (o lo que se te fue) va aquí.</div>`;
  {const G={},ord=[];lg.forEach(l=>{const k=l.n.trim().toLowerCase()+"|"+l.cat;if(!G[k]){G[k]=[];ord.push(k)}G[k].push(l)});
   ord.forEach(k=>{const g=G[k],l=g[0],tot=g.reduce((p,x)=>p+x.min,0),op=lgOpen[d+k];
-   if(g.length===1){h+=`<div class="it"><div class="sp"><b>${esc(l.n)}</b><small>${fm(l.min)}${l.note?" · "+esc(l.note):""}</small></div>${chip(l.cat)}<button class="mini" data-a="dellog" data-id="${l.id}" aria-label="Quitar">✕</button></div>`;return}
+   if(g.length===1){h+=`<div class="it"><div class="sp"><b>${esc(l.n)}</b><small>${lgR(l)}${fm(l.min)}${l.note?" · "+esc(l.note):""}</small></div>${chip(l.cat)}<button class="mini" data-a="dellog" data-id="${l.id}" aria-label="Quitar">✕</button></div>`;return}
    h+=`<div class="it"><div class="sp"><b>${esc(l.n)} ×${g.length}</b><small>${fm(tot)} en total</small></div>${chip(l.cat)}<button class="mini" data-a="lgrp" data-id="${esc(k)}" aria-expanded="${op?"true":"false"}">${op?"Ocultar":"Ver"}</button></div>`;
    if(op)g.forEach(x=>{h+=`<div class="it" style="margin-left:18px"><div class="sp"><small>${fm(x.min)}${x.st?" · "+mh(new Date(x.st).getHours()*60+new Date(x.st).getMinutes()):""}${x.note?" · "+esc(x.note):""}</small></div><button class="mini" data-a="dellog" data-id="${x.id}" aria-label="Quitar">✕</button></div>`})})}
  imp.forEach(n=>{h+=`<div class="it" style="background:var(--t-v)"><div class="sp"><b>Imprevisto: ${esc(n.txt)}</b><small>${S.skip[d]?"El día quedó en segundo plano":"Solo aviso"}</small></div></div>`});
@@ -452,7 +453,7 @@ function catForm(c){
  const n=!c;c=c||{n:"",c:"#0F6B63",k:"inv"};
  ask(n?"Nueva categoría":"Editar categoría",[{k:"n",label:"Nombre",val:c.n,req:1},{k:"c",label:"Color",type:"color",val:c.c},{k:"k",label:"Tipo para el reporte",type:"select",opts:Object.entries(KN),val:c.k}],v=>{if(n)S.cats.push(Object.assign({id:uid()},v));else Object.assign(c,v);save();renderAll();cats_dlg()},n?null:{label:"Eliminar",fn:()=>{if(S.cats.length<=1){alert("Debe quedar al menos una categoría.");cats_dlg();return}const to=S.cats.find(x=>x!==c).id;S.acts.forEach(a=>{if(a.cat===c.id)a.cat=to});S.log.forEach(l=>{if(l.cat===c.id)l.cat=to});S.cats=S.cats.filter(x=>x!==c);save();renderAll();cats_dlg()}});
 }
-const VERSION="v8";
+const VERSION="v9";
 function settings(){
  const dl=$("dlg");dl.returnValue="";dl.onclose=null;
  dl.innerHTML=`<div class="f"><h2>Ajustes</h2><div class="mu" style="font-size:12px">Kronos ${VERSION}</div><button class="b2" data-a="theme">Cambiar tema (automático / claro / oscuro)</button><button class="b2" data-a="shifts">Turnos y tiempos de trabajo</button><button class="b2" data-a="wakeset">Horas que estoy despierto</button><button class="b2" data-a="catsdlg">Categorías y colores</button><button class="b2" data-a="seed">Cargar mis cursos y universidad</button><button class="b2" data-a="tour">Ver la guía otra vez</button><button class="b2" data-a="export">Guardar copia (archivo)</button><button class="b2" data-a="import">Restaurar copia</button><div id="cs2" class="mu" style="font-size:12px">${esc(($("cs")||{}).textContent||"")}</div><button class="bd" data-a="logout">Cerrar sesión</button><div class="fb"><button class="b1" data-a="closed">Cerrar</button></div></div>`;
@@ -518,7 +519,7 @@ document.addEventListener("click",e=>{
  else if(a==="sleep"){startTimer("Dormir","nec")}
  else if(a==="tstart"){const ac=actsOn(td);ask("Iniciar cronómetro",[{k:"o",label:"¿Qué vas a hacer?",type:"select",opts:[["_n","Otra cosa (escribir nombre)"]].concat(ac.map(x=>[x.id,x.n])),val:"_n"},{k:"n",label:"Nombre (si es otra cosa)",ph:"Ej.: Trabajo extra"},{k:"c",label:"Categoría",type:"select",opts:catOpts(),val:"inv"}],v=>{if(v.o!=="_n"){const x=A(v.o);startTimer(x.n,x.cat,x.id)}else startTimer(v.n||"Sin nombre",v.c)})}
  else if(a==="tstop")stopTimer();
- else if(a==="newlog"){ask("Registrar tiempo",[{k:"n",label:"¿Qué hiciste?",req:1,ph:"Ej.: Redes sociales"},{k:"cat",label:"Categoría",type:"select",opts:catOpts(),val:"inv"},{k:"min",label:"Minutos",type:"number",val:30},{k:"note",label:"Nota (opcional)"}],v=>{if(!v.n||v.min<=0)return;S.log.push({id:uid(),date:cur,n:v.n,cat:v.cat,min:Math.round(v.min),note:v.note});save();rHoy();rTiempo()});freqChips()}
+ else if(a==="newlog"){const nw=new Date(),ne=cur===TODAY()?Math.floor((nw.getHours()*60+nw.getMinutes())/5)*5:1080;ask("Registrar tiempo · "+fdate(cur),[{k:"n",label:"¿Qué hiciste?",req:1,ph:"Ej.: Cocinar"},{k:"cat",label:"Categoría",type:"select",opts:catOpts(),val:"inv"},{k:"s",label:"Empecé a las",type:"time",val:mh(ne-30)},{k:"e",label:"Terminé a las",type:"time",val:mh(ne)},{k:"note",label:"Nota (opcional)"}],v=>{const mi=((hm(v.e)-hm(v.s))+1440)%1440;if(!v.n||mi<=0)return;const st=new Date(pd(cur).getFullYear(),pd(cur).getMonth(),pd(cur).getDate(),Math.floor(hm(v.s)/60),hm(v.s)%60).getTime();S.log.push({id:uid(),date:cur,n:v.n,cat:v.cat,min:mi,st,en:st+mi*6e4,note:v.note});save();rHoy();rTiempo()});freqChips()}
  else if(a==="dellog"){S.log=S.log.filter(l=>l.id!==id);save();rHoy();rTiempo()}
  else if(a==="imprev"){ask("Imprevisto",[{k:"txt",label:"¿Qué pasó?",req:1,ph:"Cita médica, reclamar medicamentos…"},{k:"sp",type:"check",label:"El día pasa a segundo plano (no cuenta en el porcentaje)",val:false}],v=>{if(!v.txt)return;S.news.push({id:uid(),date:cur,kind:"Imprevisto",txt:v.txt});if(v.sp)S.skip[cur]=1;save();rHoy();rNov()})}
  else if(a==="seed"){seedPersonal();$("dlg").close()}
@@ -583,12 +584,12 @@ function seedPersonal(){
 function freqChips(){
  const dl=$("dlg"),fm=dl.querySelector("form");if(!fm)return;
  const m={};S.log.forEach(l=>{const k=l.n.toLowerCase();(m[k]=m[k]||{n:l.n,c:0,cat:l.cat,min:l.min}).c++;m[k].cat=l.cat;m[k].min=l.min});
- const DFL=[["Dormir","nec",480],["Siesta","nec",60],["Comer","nec",30],["Ducha y alistarme","nec",30],["Redes sociales","per",30],["Series o videos","oci",60],["Ajustes con Claude","inv",30],["Tiempo en familia","fam",60],["Didi (servicio)","nec",45]];
+ const DFL=[["Dormir","nec",480],["Siesta","nec",60],["Comer","nec",30],["Ducha y alistarme","nec",30],["Redes sociales","per",30],["Series o videos","oci",60],["Ajustes con Claude","inv",30],["Tiempo en familia","fam",60],["Didi (servicio)","nec",45],["Cocinar","nec",60]];
  DFL.forEach(d=>{if(!m[d[0].toLowerCase()])m[d[0].toLowerCase()]={n:d[0],c:0,cat:S.cats.some(c=>c.id===d[1])?d[1]:"inv",min:d[2]}});
- const L=Object.values(m).sort((a,b)=>b.c-a.c).slice(0,10);
+ const L=Object.values(m).sort((a,b)=>b.c-a.c).slice(0,12);
  const box=document.createElement("div");box.innerHTML='<div style="font-size:13px;font-weight:600;margin-bottom:6px">Lo que haces seguido (toca uno)</div><div class="chips2" style="display:flex;flex-wrap:wrap;gap:6px">'+L.map((x,i)=>`<button type="button" class="mini" data-i="${i}" style="padding:8px 12px">${esc(x.n)}</button>`).join("")+"</div>";
  const h2=fm.querySelector("h2");h2.after(box);
- const fill=x=>{fm.elements.n.value=x.n;fm.elements.cat.value=x.cat;fm.elements.min.value=x.min};
+ const fill=x=>{fm.elements.n.value=x.n;fm.elements.cat.value=x.cat;{const e=hm(fm.elements.e.value||"18:00");fm.elements.s.value=mh(e-x.min)}};
  box.querySelectorAll("button").forEach(b=>b.onclick=()=>fill(L[+b.dataset.i]));
  fm.elements.n.addEventListener("change",()=>{const x=m[fm.elements.n.value.trim().toLowerCase()];if(x)fill(x)});
 }

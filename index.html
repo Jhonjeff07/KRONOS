@@ -219,11 +219,14 @@ function ask(title,fields,ok,extra){
 const EFS=(d,id)=>{const e=eff(d)[id],x=actsOn(d).find(y=>y.id===id);return e?e.s:hm(x.t)};
 const durOf=(d,a)=>a.dur+(S.ext[d+"|"+a.id]||0);
 const pushable=a=>{const k=cat(a.cat).k;return k==="inv"||k==="oci"||k==="per"};
-function eff(d){const out={};if(d!==TODAY())return out;const now=new Date(),nm=now.getHours()*60+now.getMinutes(),T=S.timer;let cur2=0;
+function eff(d){const out={};if(d!==TODAY())return out;const now=new Date(),nm=now.getHours()*60+now.getMinutes(),T=S.timer,mn=t=>{const x=new Date(t);return x.getHours()*60+x.getMinutes()};let cur2=0;
+ const busy=[];(S.runs||[]).forEach(r=>{if(r.d===d&&typeof r.s==="number"&&typeof r.e==="number"&&r.e>r.s&&iso(new Date(r.s))===d)busy.push([mn(r.s),mn(r.e)])});
+ if(T&&T.act&&T.date===d&&iso(new Date(T.start))===d){const ra=actsOn(d).find(x=>x.id===T.act);busy.push([mn(T.start),Math.max(mn(T.start)+(ra?durOf(d,ra):0),nm)+1])}
+ const free=(st,dur)=>{let ch=1,g=0;while(ch&&g++<20){ch=0;for(const b of busy){if(st<b[1]&&st+dur>b[0]){st=Math.ceil(b[1]/5)*5;ch=1}}}return st};
  actsOn(d).forEach(a=>{const dur=durOf(d,a),s0=hm(a.t),m=minDone(d,a),run=T&&T.act===a.id&&T.date===d;
-  if(m){cur2=Math.max(cur2,s0+dur);return}
-  if(run){const e=Math.max(s0+dur,nm);cur2=Math.max(cur2,e);return}
-  if(pushable(a)){let st=Math.max(s0,cur2);if(s0<nm)st=Math.max(st,Math.ceil(nm/5)*5);if(st!==s0)out[a.id]={s:st,e:st+dur};cur2=st+dur}else cur2=Math.max(cur2,s0+dur)});
+  if(m){const rr=(S.runs||[]).filter(r=>r.d===d&&r.id===a.id&&typeof r.e==="number"&&iso(new Date(r.e))===d);cur2=Math.max(cur2,rr.length?mn(rr[rr.length-1].e):s0+dur);return}
+  if(run){const rs=iso(new Date(T.start))===d?mn(T.start):s0,e=Math.max(rs+dur,nm);if(rs!==s0)out[a.id]={s:rs,e};cur2=Math.max(cur2,e);return}
+  if(pushable(a)){let st=Math.max(s0,cur2);if(s0<nm)st=Math.max(st,Math.ceil(nm/5)*5);st=free(st,dur);if(st!==s0)out[a.id]={s:st,e:st+dur};cur2=st+dur}else cur2=Math.max(cur2,s0+dur)});
  return out}
 function freeInfo(d){const w=(S.wake||[420,1440]).slice(),iv=[];if(d===TODAY()){const n=new Date(),nm=Math.ceil((n.getHours()*60+n.getMinutes())/5)*5;if(nm>w[0])w[0]=Math.min(nm,w[1])}
  actsOn(d).forEach(a=>{if(/^dormir/i.test(a.n))return;const s0=Math.max(w[0],hm(a.t)),e=Math.min(w[1],hm(a.t)+durOf(d,a));if(e>s0)iv.push([s0,e])});
@@ -422,7 +425,7 @@ function catForm(c){
  const n=!c;c=c||{n:"",c:"#0F6B63",k:"inv"};
  ask(n?"Nueva categoría":"Editar categoría",[{k:"n",label:"Nombre",val:c.n,req:1},{k:"c",label:"Color",type:"color",val:c.c},{k:"k",label:"Tipo para el reporte",type:"select",opts:Object.entries(KN),val:c.k}],v=>{if(n)S.cats.push(Object.assign({id:uid()},v));else Object.assign(c,v);save();renderAll();cats_dlg()},n?null:{label:"Eliminar",fn:()=>{if(S.cats.length<=1){alert("Debe quedar al menos una categoría.");cats_dlg();return}const to=S.cats.find(x=>x!==c).id;S.acts.forEach(a=>{if(a.cat===c.id)a.cat=to});S.log.forEach(l=>{if(l.cat===c.id)l.cat=to});S.cats=S.cats.filter(x=>x!==c);save();renderAll();cats_dlg()}});
 }
-const VERSION="v4";
+const VERSION="v5";
 function settings(){
  const dl=$("dlg");dl.returnValue="";dl.onclose=null;
  dl.innerHTML=`<div class="f"><h2>Ajustes</h2><div class="mu" style="font-size:12px">Kronos ${VERSION}</div><button class="b2" data-a="theme">Cambiar tema (automático / claro / oscuro)</button><button class="b2" data-a="shifts">Turnos y tiempos de trabajo</button><button class="b2" data-a="wakeset">Horas que estoy despierto</button><button class="b2" data-a="catsdlg">Categorías y colores</button><button class="b2" data-a="seed">Cargar mis cursos y universidad</button><button class="b2" data-a="tour">Ver la guía otra vez</button><button class="b2" data-a="export">Guardar copia (archivo)</button><button class="b2" data-a="import">Restaurar copia</button><div id="cs2" class="mu" style="font-size:12px">${esc(($("cs")||{}).textContent||"")}</div><button class="bd" data-a="logout">Cerrar sesión</button><div class="fb"><button class="b1" data-a="closed">Cerrar</button></div></div>`;
